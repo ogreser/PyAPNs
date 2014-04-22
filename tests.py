@@ -179,7 +179,7 @@ class TestAPNs(unittest.TestCase):
             badge = 4
         )
         priority = 10
- 
+
         frame = Frame()
         frame.add_item(token_hex, payload, identifier, expiry, priority)
 
@@ -187,7 +187,7 @@ class TestAPNs(unittest.TestCase):
         self.assertEqual(f, str(frame))
 
     def testPayloadTooLargeError(self):
-        # The maximum size of the JSON payload is MAX_PAYLOAD_LENGTH 
+        # The maximum size of the JSON payload is MAX_PAYLOAD_LENGTH
         # bytes. First determine how many bytes this allows us in the
         # raw payload (i.e. before JSON serialisation)
         json_overhead_bytes = len(Payload('.').json()) - 1
@@ -195,13 +195,17 @@ class TestAPNs(unittest.TestCase):
 
         # Test ascii characters payload
         Payload('.' * max_raw_payload_bytes)
-        self.assertRaises(PayloadTooLargeError, Payload, 
+        self.assertRaises(PayloadTooLargeError, Payload,
             '.' * (max_raw_payload_bytes + 1))
 
         # Test unicode 2-byte characters payload
         Payload(u'\u0100' * int(max_raw_payload_bytes / 2))
         self.assertRaises(PayloadTooLargeError, Payload,
             u'\u0100' * (int(max_raw_payload_bytes / 2) + 1))
+
+    def testPayloadWithoutAps(self):
+        payload = Payload(custom={'a': 1})
+        self.assertNotIn('aps', payload.dict())
 
 if __name__ == '__main__':
     unittest.main()
