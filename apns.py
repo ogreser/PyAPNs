@@ -25,7 +25,7 @@
 
 from binascii import a2b_hex, b2a_hex
 from datetime import datetime
-from socket import socket, timeout, AF_INET, SOCK_STREAM
+from socket import socket, timeout as timeout_error, AF_INET, SOCK_STREAM
 from struct import pack, unpack
 import sys
 
@@ -46,7 +46,7 @@ MAX_PAYLOAD_LENGTH = 256
 class APNs(object):
     """A class representing an Apple Push Notification service connection"""
 
-    def __init__(self, use_sandbox=False, cert_file=None, key_file=None):
+    def __init__(self, use_sandbox=False, cert_file=None, key_file=None, timeout=None):
         """
         Set use_sandbox to True to use the sandbox (test) APNs servers.
         Default is False.
@@ -57,6 +57,7 @@ class APNs(object):
         self.key_file = key_file
         self._feedback_connection = None
         self._gateway_connection = None
+        self._timeout = timeout
 
     @staticmethod
     def packed_uchar(num):
@@ -98,9 +99,10 @@ class APNs(object):
     def feedback_server(self):
         if not self._feedback_connection:
             self._feedback_connection = FeedbackConnection(
-                use_sandbox = self.use_sandbox,
-                cert_file = self.cert_file,
-                key_file = self.key_file
+                use_sandbox=self.use_sandbox,
+                cert_file=self.cert_file,
+                key_file=self.key_file,
+                timeout=self._timeout,
             )
         return self._feedback_connection
 
@@ -108,9 +110,10 @@ class APNs(object):
     def gateway_server(self):
         if not self._gateway_connection:
             self._gateway_connection = GatewayConnection(
-                use_sandbox = self.use_sandbox,
-                cert_file = self.cert_file,
-                key_file = self.key_file
+                use_sandbox=self.use_sandbox,
+                cert_file=self.cert_file,
+                key_file=self.key_file,
+                timeout=self._timeout,
             )
         return self._gateway_connection
 
@@ -123,7 +126,7 @@ class APNsConnection(object):
         super(APNsConnection, self).__init__()
         self.cert_file = cert_file
         self.key_file = key_file
-        self.timeout = timeout
+        self.timeout = timeout and float(timeout)
         self._socket = None
         self._ssl = None
 
@@ -140,7 +143,7 @@ class APNsConnection(object):
                 self._socket.settimeout(self.timeout)
                 self._socket.connect((self.server, self.port))
                 break
-            except timeout:
+            except timeout_error:
                 pass
             except:
                 raise
@@ -150,13 +153,13 @@ class APNsConnection(object):
             try:
                 self._ssl = wrap_socket(self._socket, self.key_file, self.cert_file)
                 break
-            except SSLError, ex:
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     sys.exc_clear()
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     sys.exc_clear()
                 else:
-                   raise
+                    raise
 
     def _disconnect(self):
         if self._socket:

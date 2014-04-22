@@ -18,6 +18,12 @@ parser.add_option("-m", "--message",
                   dest="message",
                   help="Message")
 
+parser.add_option("-t", "--timeout",
+                  dest="timeout",
+                  type="float",
+                  default=None,
+                  help="Connection timeout")
+
 options, args = parser.parse_args()
 
 if options.certificate_file is None:
@@ -29,7 +35,7 @@ if options.push_token is None:
 if options.message is None:
     parser.error('Must provide --message')
 
-apns = APNs(cert_file=options.certificate_file)
+apns = APNs(cert_file=options.certificate_file, timeout=options.timeout)
 
 # Send a notification
 payload = Payload(alert=options.message, sound="default", badge=1)
